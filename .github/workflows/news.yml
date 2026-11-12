@@ -1,27 +1,78 @@
-name: Send News
+name: AI 新闻推送
 
 on:
   schedule:
-    - cron: '0 */2 * * *'   # 每2小时运行一次
-  workflow_dispatch:        # 允许手动触发
+    # 每 30 分钟一次。GitHub cron 是"最快 30 分钟"，实际会有 5-20 分钟延迟，属正常
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '运行模式'
+        type: choice
+        default: run
+        options:
+          - run       # 正常抓取并推送
+          - test      # 只发一条自检消息，验证 token / chat_id
+          - baseline  # 把当前新闻全部标记为已读，不推送
+
+# 防止上一轮没跑完下一轮又启动，导致重复推送
+concurrency:
+  group: ai-news-push
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
-  send-news:
+  push:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
     steps:
-      - name: Checkout
+      - name: 检出代码
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: 准备 Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
+          cache: pip
 
-      - name: Install dependencies
-        run: pip install feedparser requests
+      - name: 安装依赖
+        run: pip install -r requirements.txt
 
-      - name: Run news bot
+      - name: 准备工作目录
+        run: mkdir -p state
+
+      # 关键：把去重状态从上一轮恢复回来。
+      # 没有这一步，每次运行都是全新容器，seen.json 从空开始，
+      # 结果就是每 2 小时把同样几十条新闻重发一遍。
+      - name: 恢复去重状态
+        uses: actions/cache/restore@v4
+        with:
+          path: state
+          key: ai-news-state-${{ github.run_id }}
+          restore-keys: |
+            ai-news-state-
+
+      - name: 运行机器人
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
-        run: python news_bot.py
+          STATE_FILE: state/seen.json
+          MAX_PER_RUN: '10'
+          MAX_AGE_HOURS: '30'
+          TZ: Asia/Shanghai
+        run: |
+          case "${{ inputs.mode || 'run' }}" in
+            test)     python news_bot.py --test ;;
+            baseline) python news_bot.py --baseline ;;
+            *)        python news_bot.py ;;
+          esac
+
+      - name: 保存去重状态
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: state
+          key: ai-news-state-${{ github.run_id }}
