@@ -11,9 +11,9 @@ on:
         type: choice
         default: run
         options:
-          - run       # 正常抓取并推送
-          - test      # 只发一条自检消息，验证 token / chat_id
-          - baseline  # 把当前新闻全部标记为已读，不推送
+          - run       # 正常抓取并发布到 X
+          - dry_run   # 只打印不发
+          - baseline  # 把当前新闻全部标记为已读，不发布
 
 # 防止上一轮没跑完下一轮又启动，导致重复推送
 concurrency:
@@ -57,15 +57,14 @@ jobs:
 
       - name: 运行机器人
         env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          CHAT_ID: ${{ secrets.CHAT_ID }}
+          BUFFER_TOKEN: ${{ secrets.BUFFER_TOKEN }}
           STATE_FILE: state/seen.json
           MAX_PER_RUN: '2'
           MAX_AGE_HOURS: '30'
           TZ: Asia/Shanghai
         run: |
           case "${{ inputs.mode || 'run' }}" in
-            test)     python news_bot.py --test ;;
+            dry_run)  python news_bot.py --dry-run ;;
             baseline) python news_bot.py --baseline ;;
             *)        python news_bot.py ;;
           esac
