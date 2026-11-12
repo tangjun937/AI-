@@ -2,8 +2,8 @@ name: AI 新闻推送
 
 on:
   schedule:
-    # 每 30 分钟一次。GitHub cron 是"最快 30 分钟"，实际会有 5-20 分钟延迟，属正常
-    - cron: '*/30 * * * *'
+    # 每小时一次（UTC 整点）。GitHub cron 实际会有 5-20 分钟延迟，属正常
+    - cron: '0 * * * *'
   workflow_dispatch:
     inputs:
       mode:
@@ -60,7 +60,7 @@ jobs:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
           STATE_FILE: state/seen.json
-          MAX_PER_RUN: '10'
+          MAX_PER_RUN: '2'
           MAX_AGE_HOURS: '30'
           TZ: Asia/Shanghai
         run: |
