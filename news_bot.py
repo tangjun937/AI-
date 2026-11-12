@@ -33,7 +33,7 @@ BOT_TOKEN = (os.getenv("BOT_TOKEN") or os.getenv("TELEGRAM_BOT_TOKEN") or "").st
 CHAT_ID = (os.getenv("CHAT_ID") or os.getenv("TELEGRAM_CHAT_ID") or "").strip()
 
 STATE_FILE = Path(os.getenv("STATE_FILE", "state/seen.json"))
-MAX_PER_RUN = int(os.getenv("MAX_PER_RUN", "10"))        # 单次运行最多推几条
+MAX_PER_RUN = int(os.getenv("MAX_PER_RUN", "2"))        # 单次运行最多推几条
 PER_FEED = int(os.getenv("PER_FEED", "4"))              # 每个源每轮最多看几条
 MIN_SCORE = float(os.getenv("MIN_SCORE", "1"))          # 关键词命中数下限
 MAX_AGE_HOURS = float(os.getenv("MAX_AGE_HOURS", "30")) # 超过这个时间的旧闻不推
